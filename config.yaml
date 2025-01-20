@@ -8,18 +8,19 @@
 # important: slider indexes start at 0, regardless of which analog pins you're using!
 slider_mapping:
   0: master
-  1: chrome.exe
-  2: spotify.exe
-  3:
-    - pathofexile_x64.exe
-    - rocketleague.exe
-  4: discord.exe
+  1: Discord
+  2:
+    - wine64-preloader
+    - wine32-preloader
+    - Civ6
+  3: firefox
+  4: deej.unmapped
 
 # set this to true if you want the controls inverted (i.e. top is 0%, bottom is 100%)
 invert_sliders: false
 
 # settings for connecting to the arduino board
-com_port: COM4
+com_port: /dev/ttyUSB0
 baud_rate: 9600
 
 # adjust the amount of signal noise reduction depending on your hardware quality
