@@ -1,0 +1,10 @@
+version: "3.3"
+
+services:
+  builder:
+    build:
+      context: "../../"
+      dockerfile: "build/debian/Dockerfile"
+    volumes:
+      - ./install:/var/temp/deej/install
+    user: "${UGID}"
