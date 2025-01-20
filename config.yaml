@@ -25,3 +25,6 @@ baud_rate: 9600
 # adjust the amount of signal noise reduction depending on your hardware quality
 # supported values are "low" (excellent hardware), "default" (regular hardware) or "high" (bad, noisy hardware)
 noise_reduction: default
+
+# setting for the adc size of your device; only need to change if your device isn't sending values [0,1023]
+adc_size: 1024

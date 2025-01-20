@@ -27,6 +27,7 @@ type CanonicalConfig struct {
 	InvertSliders bool
 
 	NoiseReductionLevel string
+        ADCSize             int
 
 	logger             *zap.SugaredLogger
 	notifier           Notifier
@@ -52,9 +53,11 @@ const (
 	configKeyCOMPort             = "com_port"
 	configKeyBaudRate            = "baud_rate"
 	configKeyNoiseReductionLevel = "noise_reduction"
+        configKeyADCSize             = "adc_size"
 
 	defaultCOMPort  = "COM4"
 	defaultBaudRate = 9600
+        defaultADCSize  = 1024
 )
 
 // has to be defined as a non-constant because we're using path.Join
@@ -95,6 +98,7 @@ func NewConfig(logger *zap.SugaredLogger, notifier Notifier) (*CanonicalConfig, 
 	userConfig.SetDefault(configKeyInvertSliders, false)
 	userConfig.SetDefault(configKeyCOMPort, defaultCOMPort)
 	userConfig.SetDefault(configKeyBaudRate, defaultBaudRate)
+	userConfig.SetDefault(configKeyADCSize, defaultADCSize)
 
 	internalConfig := viper.New()
 	internalConfig.SetConfigName(internalConfigName)
@@ -249,6 +253,15 @@ func (cc *CanonicalConfig) populateFromVipers() error {
 
 	cc.InvertSliders = cc.userConfig.GetBool(configKeyInvertSliders)
 	cc.NoiseReductionLevel = cc.userConfig.GetString(configKeyNoiseReductionLevel)
+        cc.ADCSize = cc.userConfig.GetInt(configKeyADCSize)
+        if cc.ADCSize <= 0 {
+		cc.logger.Warnw("Invalid adc size specified, using default value",
+			"key", configKeyADCSize,
+			"invalidValue", cc.ADCSize,
+			"defaultValue", defaultADCSize)
+
+		cc.ADCSize = defaultADCSize
+        }
 
 	cc.logger.Debug("Populated config fields from vipers")
 

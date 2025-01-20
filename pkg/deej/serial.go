@@ -254,6 +254,8 @@ func (sio *SerialIO) handleLine(logger *zap.SugaredLogger, line string) {
 		}
 	}
 
+        maxADCValue := sio.deej.config.ADCSize - 1
+
 	// for each slider:
 	moveEvents := []SliderMoveEvent{}
 	for sliderIdx, stringValue := range splitLine {
@@ -263,13 +265,13 @@ func (sio *SerialIO) handleLine(logger *zap.SugaredLogger, line string) {
 
 		// turns out the first line could come out dirty sometimes (i.e. "4558|925|41|643|220")
 		// so let's check the first number for correctness just in case
-		if sliderIdx == 0 && number > 1023 {
+		if sliderIdx == 0 && number > maxADCValue {
 			sio.logger.Debugw("Got malformed line from serial, ignoring", "line", line)
 			return
 		}
 
 		// map the value from raw to a "dirty" float between 0 and 1 (e.g. 0.15451...)
-		dirtyFloat := float32(number) / 1023.0
+		dirtyFloat := float32(number) / float32(maxADCValue)
 
 		// normalize it to an actual volume scalar between 0.0 and 1.0 with 2 points of precision
 		normalizedScalar := util.NormalizeScalar(dirtyFloat)
