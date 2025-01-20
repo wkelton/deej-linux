@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+        "github.com/adrg/xdg"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -44,8 +45,6 @@ const (
 	userConfigName     = "config"
 	internalConfigName = "preferences"
 
-	userConfigPath = "."
-
 	configType = "yaml"
 
 	configKeySliderMapping       = "slider_mapping"
@@ -83,7 +82,14 @@ func NewConfig(logger *zap.SugaredLogger, notifier Notifier) (*CanonicalConfig, 
 	userConfig := viper.New()
 	userConfig.SetConfigName(userConfigName)
 	userConfig.SetConfigType(configType)
-	userConfig.AddConfigPath(userConfigPath)
+	userConfig.AddConfigPath(".")
+
+	userConfigPath, err := xdg.SearchConfigFile("deej/config.yaml")
+	if err != nil {
+		logger.Infow("Config not found in $XDG_CONFIG_HOME/deej, falling back to cwd", "path", userConfigPath)
+	} else {
+	        userConfig.AddConfigPath(xdg.ConfigHome + "/deej")
+        }
 
 	userConfig.SetDefault(configKeySliderMapping, map[string][]string{})
 	userConfig.SetDefault(configKeyInvertSliders, false)
@@ -105,15 +111,20 @@ func NewConfig(logger *zap.SugaredLogger, notifier Notifier) (*CanonicalConfig, 
 
 // Load reads deej's config files from disk and tries to parse them
 func (cc *CanonicalConfig) Load() error {
-	cc.logger.Debugw("Loading config", "path", userConfigFilepath)
+	userConfigPath, err := xdg.SearchConfigFile("deej/config.yaml")
+	if err != nil {
+                userConfigPath = userConfigFilepath
+        }
+
+	cc.logger.Debugw("Loading config", "path", userConfigPath)
 
 	// make sure it exists
-	if !util.FileExists(userConfigFilepath) {
-		cc.logger.Warnw("Config file not found", "path", userConfigFilepath)
+	if !util.FileExists(userConfigPath) {
+		cc.logger.Warnw("Config file not found", "path", userConfigPath)
 		cc.notifier.Notify("Can't find configuration!",
-			fmt.Sprintf("%s must be in the same directory as deej. Please re-launch", userConfigFilepath))
+			fmt.Sprintf("%s must be in the same directory as deej or in $XDG_CONFIG_HOME/deej. Please re-launch", userConfigPath))
 
-		return fmt.Errorf("config file doesn't exist: %s", userConfigFilepath)
+		return fmt.Errorf("config file doesn't exist: %s", userConfigPath)
 	}
 
 	// load the user config
@@ -123,7 +134,7 @@ func (cc *CanonicalConfig) Load() error {
 		// if the error is yaml-format-related, show a sensible error. otherwise, show 'em to the logs
 		if strings.Contains(err.Error(), "yaml:") {
 			cc.notifier.Notify("Invalid configuration!",
-				fmt.Sprintf("Please make sure %s is in a valid YAML format.", userConfigFilepath))
+				fmt.Sprintf("Please make sure %s is in a valid YAML format.", userConfigPath))
 		} else {
 			cc.notifier.Notify("Error loading configuration!", "Please check deej's logs for more details.")
 		}
