@@ -7,7 +7,7 @@ RUN chmod 777 .
 RUN apt update && apt install -y gnome-shell
 
 # Install the build dependencies
-RUN apt update && apt install -y git golang libayatana-appindicator3-dev
+RUN apt update && apt install -y git golang libayatana-appindicator3-dev && go version
 
 VOLUME install
 

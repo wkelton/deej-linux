@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-        "github.com/adrg/xdg"
+	"github.com/adrg/xdg"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -27,7 +27,7 @@ type CanonicalConfig struct {
 	InvertSliders bool
 
 	NoiseReductionLevel string
-        ADCSize             int
+	ADCSize             int
 
 	logger             *zap.SugaredLogger
 	notifier           Notifier
@@ -35,6 +35,7 @@ type CanonicalConfig struct {
 
 	reloadConsumers []chan bool
 
+	filePath       string
 	userConfig     *viper.Viper
 	internalConfig *viper.Viper
 }
@@ -53,11 +54,11 @@ const (
 	configKeyCOMPort             = "com_port"
 	configKeyBaudRate            = "baud_rate"
 	configKeyNoiseReductionLevel = "noise_reduction"
-        configKeyADCSize             = "adc_size"
+	configKeyADCSize             = "adc_size"
 
 	defaultCOMPort  = "COM4"
 	defaultBaudRate = 9600
-        defaultADCSize  = 1024
+	defaultADCSize  = 1024
 )
 
 // has to be defined as a non-constant because we're using path.Join
@@ -90,9 +91,10 @@ func NewConfig(logger *zap.SugaredLogger, notifier Notifier) (*CanonicalConfig, 
 	userConfigPath, err := xdg.SearchConfigFile("deej/config.yaml")
 	if err != nil {
 		logger.Infow("Config not found in $XDG_CONFIG_HOME/deej, falling back to cwd", "path", userConfigPath)
+		userConfigPath = "config.yaml"
 	} else {
-	        userConfig.AddConfigPath(xdg.ConfigHome + "/deej")
-        }
+		userConfig.AddConfigPath(xdg.ConfigHome + "/deej")
+	}
 
 	userConfig.SetDefault(configKeySliderMapping, map[string][]string{})
 	userConfig.SetDefault(configKeyInvertSliders, false)
@@ -105,6 +107,7 @@ func NewConfig(logger *zap.SugaredLogger, notifier Notifier) (*CanonicalConfig, 
 	internalConfig.SetConfigType(configType)
 	internalConfig.AddConfigPath(internalConfigPath)
 
+	cc.filePath = userConfigPath
 	cc.userConfig = userConfig
 	cc.internalConfig = internalConfig
 
@@ -117,8 +120,8 @@ func NewConfig(logger *zap.SugaredLogger, notifier Notifier) (*CanonicalConfig, 
 func (cc *CanonicalConfig) Load() error {
 	userConfigPath, err := xdg.SearchConfigFile("deej/config.yaml")
 	if err != nil {
-                userConfigPath = userConfigFilepath
-        }
+		userConfigPath = userConfigFilepath
+	}
 
 	cc.logger.Debugw("Loading config", "path", userConfigPath)
 
@@ -253,15 +256,15 @@ func (cc *CanonicalConfig) populateFromVipers() error {
 
 	cc.InvertSliders = cc.userConfig.GetBool(configKeyInvertSliders)
 	cc.NoiseReductionLevel = cc.userConfig.GetString(configKeyNoiseReductionLevel)
-        cc.ADCSize = cc.userConfig.GetInt(configKeyADCSize)
-        if cc.ADCSize <= 0 {
+	cc.ADCSize = cc.userConfig.GetInt(configKeyADCSize)
+	if cc.ADCSize <= 0 {
 		cc.logger.Warnw("Invalid adc size specified, using default value",
 			"key", configKeyADCSize,
 			"invalidValue", cc.ADCSize,
 			"defaultValue", defaultADCSize)
 
 		cc.ADCSize = defaultADCSize
-        }
+	}
 
 	cc.logger.Debug("Populated config fields from vipers")
 
