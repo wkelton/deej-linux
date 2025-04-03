@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/adrg/xdg"
 	"github.com/omriharel/deej/pkg/deej/util"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -23,15 +24,23 @@ const (
 func NewLogger(buildType string) (*zap.SugaredLogger, error) {
 	var loggerConfig zap.Config
 
+	logFileInXDG := false
+
 	// release: info and above, log to file only (no UI)
 	if buildType == buildTypeRelease {
-		if err := util.EnsureDirExists(logDirectory); err != nil {
-			return nil, fmt.Errorf("ensure log directory exists: %w", err)
+		logFilePath, err := xdg.StateFile(filepath.Join("deej", logFilename))
+		if err == nil {
+			logFileInXDG = true
+		} else {
+			if err := util.EnsureDirExists(logDirectory); err != nil {
+				return nil, fmt.Errorf("ensure log directory exists: %w", err)
+			}
+			logFilePath = filepath.Join(logDirectory, logFilename)
 		}
 
 		loggerConfig = zap.NewProductionConfig()
 
-		loggerConfig.OutputPaths = []string{filepath.Join(logDirectory, logFilename)}
+		loggerConfig.OutputPaths = []string{logFilePath}
 		loggerConfig.Encoding = "console"
 
 		// development: debug and above, log to stderr only, colorful
@@ -59,6 +68,10 @@ func NewLogger(buildType string) (*zap.SugaredLogger, error) {
 
 	// no reason not to use the sugared logger - it's fast enough for anything we're gonna do
 	sugar := logger.Sugar()
+
+	if !logFileInXDG {
+		sugar.Infow("Could not create logfile in $XDG_STATE_HOME/deej, falling back to cwd")
+	}
 
 	return sugar, nil
 }
