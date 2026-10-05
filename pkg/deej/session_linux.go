@@ -203,21 +203,21 @@ func (s *masterSession) String() string {
 	return fmt.Sprintf(sessionStringFormat, s.humanReadableDesc, s.GetVolume())
 }
 
-func createChannelVolumes(channels byte, volume float32) []uint32 {
-	volumes := make([]uint32, channels)
+func createChannelVolumes(channels byte, volume float32) proto.ChannelVolumes {
+	volumes := make(proto.ChannelVolumes, channels)
 
 	for i := range volumes {
-		volumes[i] = uint32(volume * maxVolume)
+		volumes[i] = proto.Volume(volume * maxVolume)
 	}
 
 	return volumes
 }
 
-func parseChannelVolumes(volumes []uint32) float32 {
+func parseChannelVolumes(volumes proto.ChannelVolumes) float32 {
 	var level uint32
 
 	for _, volume := range volumes {
-		level += volume
+		level += uint32(volume)
 	}
 
 	return float32(level) / float32(len(volumes)) / float32(maxVolume)
