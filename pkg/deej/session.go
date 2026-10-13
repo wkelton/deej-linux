@@ -16,6 +16,7 @@ type Session interface {
 	// SetMute(m bool) error
 
 	Key() string
+	TryMatchName(name string) bool
 	Release()
 }
 

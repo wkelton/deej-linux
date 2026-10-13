@@ -14,9 +14,11 @@ type paSessionFinder struct {
 
 	client *proto.Client
 	conn   net.Conn
+
+	config *CanonicalConfig
 }
 
-func newSessionFinder(logger *zap.SugaredLogger) (SessionFinder, error) {
+func newSessionFinder(logger *zap.SugaredLogger, config *CanonicalConfig) (SessionFinder, error) {
 	client, conn, err := proto.Connect("")
 	if err != nil {
 		logger.Warnw("Failed to establish PulseAudio connection", "error", err)
@@ -39,6 +41,7 @@ func newSessionFinder(logger *zap.SugaredLogger) (SessionFinder, error) {
 		sessionLogger: logger.Named("sessions"),
 		client:        client,
 		conn:          conn,
+		config:        config,
 	}
 
 	sf.logger.Debug("Created PA session finder instance")
@@ -119,6 +122,14 @@ func (sf *paSessionFinder) getMasterSourceSession() (Session, error) {
 	return source, nil
 }
 
+func (sf *paSessionFinder) dumpProperties(rawProperties proto.PropList, name string) {
+	properties := make(map[string]string, len(rawProperties))
+	for key, value := range rawProperties {
+		properties[key] = value.String()
+	}
+	sf.logger.Infow(fmt.Sprintf("LINUX %v", name), "properties", properties)
+}
+
 func (sf *paSessionFinder) enumerateAndAddSessions(sessions *[]Session) error {
 	request := proto.GetSinkInputInfoList{}
 	reply := proto.GetSinkInputInfoListReply{}
@@ -129,25 +140,58 @@ func (sf *paSessionFinder) enumerateAndAddSessions(sessions *[]Session) error {
 	}
 
 	for _, info := range reply {
-		name, ok := info.Properties["application.process.binary"]
+		if sf.config.Linux.LogSessionProperties {
+			sf.dumpProperties(info.Properties, "sink")
+		}
 
-		// try out fallback properties
-		// this is requred for pipewire / pipewire-pulse
-		if !ok {
-			name, ok = info.Properties["node.name"]
-			if !ok {
-				name, ok = info.Properties["device.description"]
-				if !ok {
-					sf.logger.Warnw("Failed to get sink input's process name",
-						"sinkInputIndex", info.SinkInputIndex)
+		sessionNames := buildSessionNames(
+			info.Properties,
+			proto.PropList{},
+		)
 
-					continue
+		if sf.config.Linux.UseExtraAppNameFields {
+			// For apps that connect via the native PipeWire protocol (e.g. Spotify), neither
+			// application property is present on the sink-input itself — they live on the
+			// associated PulseAudio client object instead.
+			clientReq := proto.GetClientInfo{ClientIndex: info.ClientIndex}
+			clientReply := proto.GetClientInfoReply{}
+			if err := sf.client.Request(&clientReq, &clientReply); err == nil {
+				if sf.config.Linux.LogSessionProperties {
+					sf.dumpProperties(clientReply.Properties, "client")
 				}
+
+				sessionNames = buildSessionNames(
+					info.Properties,
+					clientReply.Properties,
+				)
 			}
 		}
 
+		if sf.config.Linux.LogSessionNames {
+			if sf.config.Linux.UseExtraAppNameFields {
+				sf.logger.Infow("Session",
+					"sinkAppProcessBinary", sessionNames.sinkAppProcessBinary,
+					"sinkAppName", sessionNames.sinkAppName,
+					"clientAppProcessBinary", sessionNames.clientAppProcessBinary,
+					"clientAppName", sessionNames.clientAppName,
+				)
+			} else {
+				sf.logger.Infow("Session",
+					"key", sessionNames.key,
+					"sinkAppProcessBinary", sessionNames.sinkAppProcessBinary,
+					"sinkAppName", sessionNames.sinkAppName,
+				)
+			}
+		}
+
+		if sessionNames.key == "" {
+			sf.logger.Warnw("Failed to get sink input's process name",
+				"sinkInputIndex", info.SinkInputIndex)
+			continue
+		}
+
 		// create the deej session object
-		newSession := newPASession(sf.sessionLogger, sf.client, info.SinkInputIndex, info.Channels, name.String())
+		newSession := newPASession(sf.sessionLogger, sf.client, info.SinkInputIndex, info.Channels, sessionNames)
 
 		// add it to our slice
 		*sessions = append(*sessions, newSession)

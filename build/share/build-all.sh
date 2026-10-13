@@ -10,3 +10,4 @@ mkdir "${GOCACHE}"
 
 pkg/deej/scripts/linux/build-dev.sh
 pkg/deej/scripts/linux/build-release.sh
+pkg/deej/scripts/linux/build-cross-windows.sh

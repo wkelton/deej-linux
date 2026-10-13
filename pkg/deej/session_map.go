@@ -199,6 +199,9 @@ func (m *sessionMap) sessionMapped(session Session) bool {
 			if target == session.Key() {
 				matchFound = true
 				return
+			} else if session.TryMatchName(target) {
+				matchFound = true
+				return
 			}
 		}
 	})
@@ -342,7 +345,23 @@ func (m *sessionMap) get(key string) ([]Session, bool) {
 	defer m.lock.Unlock()
 
 	value, ok := m.m[key]
-	return value, ok
+	if ok {
+		return value, ok
+	}
+
+	// If we didn't find a session by key, try to find it using additional fields from the session.
+	// Then update the map with the new key for future lookups.
+	for _, sessions := range m.m {
+		for _, session := range sessions {
+			if session.TryMatchName(key) {
+				m.m[key] = []Session{session}
+				m.logger.Debugw("Added session to map by matching name", "session", session, "key", key)
+				return m.m[key], true
+			}
+		}
+	}
+
+	return nil, false
 }
 
 func (m *sessionMap) clear() {

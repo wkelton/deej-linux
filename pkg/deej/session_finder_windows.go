@@ -42,7 +42,7 @@ const (
 	deviceSessionFormat = "device.%s"
 )
 
-func newSessionFinder(logger *zap.SugaredLogger) (SessionFinder, error) {
+func newSessionFinder(logger *zap.SugaredLogger, _ *CanonicalConfig) (SessionFinder, error) {
 	sf := &wcaSessionFinder{
 		logger:        logger.Named("session_finder"),
 		sessionLogger: logger.Named("sessions"),

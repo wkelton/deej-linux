@@ -29,3 +29,12 @@ noise_reduction: default
 
 # setting for the adc size of your device; only need to change if your device isn't sending values [0,1023]
 adc_size: 1024
+
+# custom settings for linux
+linux:
+  # look at additional pulseaudio fields when matching applications with names in slider_mapping
+  use_extra_app_name_fields: true
+  # log the names found for each pulseaudio application
+  log_session_names: true
+  # log all the pulseaudio properties for each pulseaudio application
+  log_session_properties: false

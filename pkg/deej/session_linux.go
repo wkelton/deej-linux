@@ -3,6 +3,7 @@ package deej
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -14,10 +15,45 @@ const maxVolume = 0x10000
 
 var errNoSuchProcess = errors.New("No such process")
 
+type sessionNames struct {
+	key                    string
+	sinkAppProcessBinary   string
+	sinkAppName            string
+	clientAppProcessBinary string
+	clientAppName          string
+}
+
+func buildSessionNames(sinkProperties proto.PropList, clientProperties proto.PropList) sessionNames {
+	sn := sessionNames{
+		key:                    "",
+		sinkAppProcessBinary:   sinkProperties["application.process.binary"].String(),
+		sinkAppName:            sinkProperties["application.name"].String(),
+		clientAppProcessBinary: clientProperties["application.process.binary"].String(),
+		clientAppName:          clientProperties["application.name"].String(),
+	}
+
+	if sinkProperties["application.process.binary"].String() != "" {
+		sn.key = sinkProperties["application.process.binary"].String()
+	} else if sinkProperties["application.name"].String() != "" {
+		sn.key = sinkProperties["application.name"].String()
+	} else if clientProperties["application.process.binary"].String() != "" {
+		sn.key = clientProperties["application.process.binary"].String()
+	} else if clientProperties["application.name"].String() != "" {
+		sn.key = clientProperties["application.name"].String()
+	}
+
+	return sn
+}
+
+func (sn *sessionNames) hasName(name string) bool {
+	return strings.ToLower(sn.sinkAppProcessBinary) == name || strings.ToLower(sn.sinkAppName) == name ||
+		strings.ToLower(sn.clientAppProcessBinary) == name || strings.ToLower(sn.clientAppName) == name
+}
+
 type paSession struct {
 	baseSession
 
-	processName string
+	sessionNames sessionNames
 
 	client *proto.Client
 
@@ -40,7 +76,7 @@ func newPASession(
 	client *proto.Client,
 	sinkInputIndex uint32,
 	sinkInputChannels byte,
-	processName string,
+	sessionNames sessionNames,
 ) *paSession {
 
 	s := &paSession{
@@ -49,9 +85,9 @@ func newPASession(
 		sinkInputChannels: sinkInputChannels,
 	}
 
-	s.processName = processName
-	s.name = processName
-	s.humanReadableDesc = processName
+	s.name = sessionNames.key
+	s.humanReadableDesc = sessionNames.key
+	s.sessionNames = sessionNames
 
 	// use a self-identifying session name e.g. deej.sessions.chrome
 	s.logger = logger.Named(s.Key())
@@ -93,6 +129,16 @@ func newMasterSession(
 	return s
 }
 
+func (s *paSession) TryMatchName(name string) bool {
+	if s.sessionNames.hasName(name) {
+		if !strings.HasSuffix(s.logger.Desugar().Name(), name) {
+			s.logger = s.logger.Named(name)
+		}
+		return true
+	}
+	return false
+}
+
 func (s *paSession) GetVolume() float32 {
 	request := proto.GetSinkInputInfo{
 		SinkInputIndex: s.sinkInputIndex,
@@ -131,6 +177,10 @@ func (s *paSession) Release() {
 
 func (s *paSession) String() string {
 	return fmt.Sprintf(sessionStringFormat, s.humanReadableDesc, s.GetVolume())
+}
+
+func (s *masterSession) TryMatchName(name string) bool {
+	return s.Key() == name
 }
 
 func (s *masterSession) GetVolume() float32 {
@@ -203,21 +253,21 @@ func (s *masterSession) String() string {
 	return fmt.Sprintf(sessionStringFormat, s.humanReadableDesc, s.GetVolume())
 }
 
-func createChannelVolumes(channels byte, volume float32) []uint32 {
-	volumes := make([]uint32, channels)
+func createChannelVolumes(channels byte, volume float32) proto.ChannelVolumes {
+	volumes := make(proto.ChannelVolumes, channels)
 
 	for i := range volumes {
-		volumes[i] = uint32(volume * maxVolume)
+		volumes[i] = proto.Volume(volume * maxVolume)
 	}
 
 	return volumes
 }
 
-func parseChannelVolumes(volumes []uint32) float32 {
+func parseChannelVolumes(volumes proto.ChannelVolumes) float32 {
 	var level uint32
 
 	for _, volume := range volumes {
-		level += volume
+		level += uint32(volume)
 	}
 
 	return float32(level) / float32(len(volumes)) / float32(maxVolume)

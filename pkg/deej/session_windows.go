@@ -36,6 +36,14 @@ type masterSession struct {
 	stale bool // when set to true, we should refresh sessions on the next call to SetVolume
 }
 
+func (s *wcaSession) TryMatchName(name string) bool {
+	return s.Key() == name
+}
+
+func (s *masterSession) TryMatchName(name string) bool {
+	return s.Key() == name
+}
+
 func newWCASession(
 	logger *zap.SugaredLogger,
 	control *wca.IAudioSessionControl2,
