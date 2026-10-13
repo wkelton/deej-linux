@@ -5,7 +5,7 @@ This is a fork of the deej project to maintain tweaks required for easy use on L
 ## Changes
 
 ### Fixes
-- Changes pulseaudio session finder to match application on several fields
+- Changed pulseaudio session finder to match application on several fields
   - Should help with applications run with pipewire or wrapped in proton/wine
 - Merged reconnect fix from upstream (mainly for Windows)
 
@@ -18,6 +18,7 @@ This is a fork of the deej project to maintain tweaks required for easy use on L
 ### Building
 - Build scripts place executables in `install` directory
 - Build with docker containers - Debian 13 currently
+- Addded script to cross build for Windows from Linux
 
 ### Dependencies
 - Updated go packages

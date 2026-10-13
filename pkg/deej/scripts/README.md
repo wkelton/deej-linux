@@ -2,7 +2,7 @@
 
 This document lists the various scripts in the project and their purposes.
 
-> Note: All scripts are meant to be run from the root of the repository, i.e. from the _root_ `deej` directory: `.\pkg\deej\scripts\...\whatever.bat`. They're not guaranteed to work correctly if run from another directory.
+> The Windows scripts are intended to be run from the repository root. The Linux scripts can be run from any working directory.
 
 ### Windows
 
@@ -18,3 +18,4 @@ This document lists the various scripts in the project and their purposes.
 - [`build-dev.sh`](./linux/build-dev.sh): Builds deej for development purposes
 - [`build-release.sh`](./linux/build-release.sh): Builds deej for releases
 - [`build-all.sh`](./linux/build-all.sh): Helper script to build all variants
+- [`build-cross-windows.sh`](./linux/build-cross-windows.sh): Cross-compiles the development build for Windows/amd64
