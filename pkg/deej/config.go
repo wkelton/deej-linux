@@ -29,6 +29,12 @@ type CanonicalConfig struct {
 	NoiseReductionLevel string
 	ADCSize             int
 
+	Linux struct {
+		UseExtraAppNameFields bool
+		LogSessionNames       bool
+		LogSessionProperties  bool
+	}
+
 	logger             *zap.SugaredLogger
 	notifier           Notifier
 	stopWatcherChannel chan bool
@@ -55,6 +61,10 @@ const (
 	configKeyBaudRate            = "baud_rate"
 	configKeyNoiseReductionLevel = "noise_reduction"
 	configKeyADCSize             = "adc_size"
+
+	configKeyLinuxUseExtraAppNameFields = "linux.use_extra_app_name_fields"
+	configKeyLinuxLogSessionNames       = "linux.log_session_names"
+	configKeyLinuxLogSessionProperties  = "linux.log_session_properties"
 
 	defaultCOMPort  = "COM4"
 	defaultBaudRate = 9600
@@ -265,6 +275,10 @@ func (cc *CanonicalConfig) populateFromVipers() error {
 
 		cc.ADCSize = defaultADCSize
 	}
+
+	cc.Linux.UseExtraAppNameFields = cc.userConfig.GetBool(configKeyLinuxUseExtraAppNameFields)
+	cc.Linux.LogSessionNames = cc.userConfig.GetBool(configKeyLinuxLogSessionNames)
+	cc.Linux.LogSessionProperties = cc.userConfig.GetBool(configKeyLinuxLogSessionProperties)
 
 	cc.logger.Debug("Populated config fields from vipers")
 
