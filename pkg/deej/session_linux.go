@@ -21,6 +21,10 @@ type sessionNames struct {
 	sinkAppName            string
 	clientAppProcessBinary string
 	clientAppName          string
+
+	// For logging purposes only, not used for matching
+	mediaName string
+	objectId  string
 }
 
 func buildSessionNames(sinkProperties proto.PropList, clientProperties proto.PropList) sessionNames {
@@ -30,6 +34,8 @@ func buildSessionNames(sinkProperties proto.PropList, clientProperties proto.Pro
 		sinkAppName:            sinkProperties["application.name"].String(),
 		clientAppProcessBinary: clientProperties["application.process.binary"].String(),
 		clientAppName:          clientProperties["application.name"].String(),
+		mediaName:              sinkProperties["media.name"].String(),
+		objectId:               sinkProperties["object.id"].String(),
 	}
 
 	if sinkProperties["application.process.binary"].String() != "" {
@@ -176,7 +182,8 @@ func (s *paSession) Release() {
 }
 
 func (s *paSession) String() string {
-	return fmt.Sprintf(sessionStringFormat, s.humanReadableDesc, s.GetVolume())
+	return fmt.Sprintf("<session: %s, vol: %.2f, media: %s, id: %s>",
+		s.humanReadableDesc, s.GetVolume(), s.sessionNames.mediaName, s.sessionNames.objectId)
 }
 
 func (s *masterSession) TryMatchName(name string) bool {

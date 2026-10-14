@@ -174,12 +174,16 @@ func (sf *paSessionFinder) enumerateAndAddSessions(sessions *[]Session) error {
 					"sinkAppName", sessionNames.sinkAppName,
 					"clientAppProcessBinary", sessionNames.clientAppProcessBinary,
 					"clientAppName", sessionNames.clientAppName,
+					"mediaName", sessionNames.mediaName,
+					"objectId", sessionNames.objectId,
 				)
 			} else {
 				sf.logger.Infow("Session",
 					"key", sessionNames.key,
 					"sinkAppProcessBinary", sessionNames.sinkAppProcessBinary,
 					"sinkAppName", sessionNames.sinkAppName,
+					"mediaName", sessionNames.mediaName,
+					"objectId", sessionNames.objectId,
 				)
 			}
 		}
